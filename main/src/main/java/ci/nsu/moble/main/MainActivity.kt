@@ -9,9 +9,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,30 +42,30 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainScreenActivity(modifier: Modifier = Modifier) {
-    var text by remember { mutableStateOf("") }
+    var textToPass by remember { mutableStateOf("") }
     val context = LocalContext.current
 
     Column(
         modifier = modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        TextField(
-            value = text,
-            onValueChange = { text = it },
-            label = { Text("Введите текст") },
+        OutlinedTextField(
+            value = textToPass,
+            onValueChange = { textToPass = it },
+            label = { Text("Enter text to pass") },
             modifier = Modifier.padding(bottom = 16.dp)
         )
-        
+
         Button(
             onClick = {
                 val intent = Intent(context, SecondActivity::class.java).apply {
-                    putExtra("text_data", text)
+                    putExtra("text_data", textToPass)
                 }
                 context.startActivity(intent)
             },
             modifier = Modifier.padding(top = 16.dp)
         ) {
-            Text("Открыть SecondActivity")
+            Text("Open SecondActivity")
         }
     }
 }
