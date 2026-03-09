@@ -52,7 +52,7 @@ fun MainScreenActivity(modifier: Modifier = Modifier) {
         OutlinedTextField(
             value = textToPass,
             onValueChange = { textToPass = it },
-            label = { Text("Enter text to pass") },
+            label = { Text("Введите текст для передачи") },
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
@@ -65,7 +65,7 @@ fun MainScreenActivity(modifier: Modifier = Modifier) {
             },
             modifier = Modifier.padding(top = 16.dp)
         ) {
-            Text("Open SecondActivity")
+            Text("Перейти в SecondActivity")
         }
     }
 }
