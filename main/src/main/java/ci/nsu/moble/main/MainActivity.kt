@@ -3,6 +3,7 @@ package ci.nsu.moble.main
 import android.graphics.Color
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
@@ -37,9 +38,11 @@ class MainActivity : AppCompatActivity() {
                     }
                 } else {
                     Toast.makeText(this, "Этого цвета нет в списке, попробуйте ещё раз", Toast.LENGTH_LONG).show()
+                    Log.v("colorProblem","Этого цвета нет в списке, попробуйте ещё раз")
                 }
             } else {
                 Toast.makeText(this, "Введите цвет", Toast.LENGTH_SHORT).show()
+                Log.v("colorProblem","Пустое поле")
             }
         }
     }
