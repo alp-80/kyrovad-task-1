@@ -11,9 +11,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.KeyboardOptions
+import androidx.compose.ui.platform.LocalContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -28,198 +28,146 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun CalculatorApp() {
-    var currentScreen by remember { mutableStateOf(Screen.MAIN) }
-
+    var screen by remember { mutableStateOf("main") }
     var startAmount by remember { mutableStateOf("") }
     var termMonths by remember { mutableStateOf("") }
+    var selectedRate by remember { mutableStateOf<Double?>(null) }
+    var monthlyTopUp by remember { mutableStateOf("") }
+    val context = LocalContext.current
 
-    when (currentScreen) {
-        Screen.MAIN -> MainScreen(
-            onCalculateClick = { currentScreen = Screen.STAGE_1 },
-            onHistoryClick = { Toast.makeText(context, "История расчётов", Toast.LENGTH_SHORT).show() },
-            onCloseClick = { finishAffinity() }
+    when (screen) {
+        "main" -> MainScreen(
+            onCalculate = { screen = "stage1" },
+            onHistory = { Toast.makeText(context, "История расчётов", Toast.LENGTH_SHORT).show() },
+            onClose = { (context as? android.app.Activity)?.finishAffinity() }
         )
-        Screen.STAGE_1 -> Stage1Screen(
-            startAmount = startAmount,
-            onStartAmountChange = { startAmount = it },
-            termMonths = termMonths,
-            onTermMonthsChange = { termMonths = it },
-            onBackToMain = { currentScreen = Screen.MAIN },
-            onNext = {
-                if (validateStage1(startAmount, termMonths)) {
-                    currentScreen = Screen.STAGE_2
-                } else {
-                    Toast.makeText(context, "Заполните все обязательные поля", Toast.LENGTH_SHORT).show()
-                }
-            }
-        )
-        Screen.STAGE_2 -> { }
-    }
-}
 
-@Composable
-fun getContext() = androidx.compose.ui.platform.LocalContext.current
-
-@Composable
-fun Stage1Screen(
-    startAmount: String,
-    onStartAmountChange: (String) -> Unit,
-    termMonths: String,
-    onTermMonthsChange: (String) -> Unit,
-    onBackToMain: () -> Unit,
-    onNext: () -> Unit
-) {
-    val context = getContext()
-
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp),
+        "stage1" -> Column(
+            modifier = Modifier.fillMaxSize().padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(
-                text = "Этап 1: Основные параметры",
-                fontSize = 24.sp,
-                style = MaterialTheme.typography.headlineSmall
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
+            Text("Основные параметры", fontSize = 24.sp)
+            Spacer(modifier = Modifier.height(24.dp))
 
             OutlinedTextField(
                 value = startAmount,
-                onValueChange = onStartAmountChange,
+                onValueChange = { startAmount = it },
                 label = { Text("Стартовый взнос") },
-                placeholder = { Text("Введите сумму") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth(),
-                isError = startAmount.isNotBlank() && startAmount.toDoubleOrNull() == null
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
-
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             OutlinedTextField(
                 value = termMonths,
-                onValueChange = onTermMonthsChange,
-                label = { Text("Срок вклада в месяцах") },
-                placeholder = { Text("Введите количество месяцев") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth(),
-                isError = termMonths.isNotBlank() && termMonths.toIntOrNull() == null
+                onValueChange = { termMonths = it },
+                label = { Text("Срок в месяцах") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
+            Spacer(modifier = Modifier.height(24.dp))
 
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
+            Row {
+                Button({ screen = "main" }, modifier = Modifier.weight(1f)) { Text("В начало") }
+                Spacer(modifier = Modifier.width(12.dp))
                 Button(
-                    onClick = onBackToMain,
-                    modifier = Modifier.weight(1f).padding(end = 8.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondary
+                    onClick = {
+                        if (startAmount.toDoubleOrNull() != null && termMonths.toIntOrNull() != null) {
+                            screen = "stage2"
+                        } else {
+                            Toast.makeText(context, "Заполните поля корректно", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.weight(1f)
+                ) { Text("Далее") }
+            }
+        }
+
+        "stage2" -> {
+            val months = termMonths.toIntOrNull()
+            val rates = when {
+                months == null -> emptyList()
+                months < 6 -> listOf(15.0)
+                months < 12 -> listOf(10.0)
+                else -> listOf(5.0)
+            }
+
+            Column(
+                modifier = Modifier.fillMaxSize().padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text("Дополнительные параметры", fontSize = 24.sp)
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (months == null) {
+                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
+                        Text("Ошибка: укажите корректный срок", modifier = Modifier.padding(12.dp))
+                    }
+                } else {
+                    var expanded by remember { mutableStateOf(false) }
+                    OutlinedTextField(
+                        value = selectedRate?.let { "${it}%" } ?: "Не выбрано",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Процентная ставка") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+                        modifier = Modifier.fillMaxWidth()
                     )
-                ) {
-                    Text("В начало")
+
+                    DropdownMenu(expanded, { expanded = false }) {
+                        rates.forEach { rate ->
+                            DropdownMenuItem({ Text("$rate%") }, { selectedRate = rate; expanded = false })
+                        }
+                    }
                 }
 
-                Button(
-                    onClick = onNext,
-                    modifier = Modifier.weight(1f).padding(start = 8.dp)
-                ) {
-                    Text("Далее")
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = monthlyTopUp,
+                    onValueChange = { monthlyTopUp = it },
+                    label = { Text("Ежемесячное пополнение") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row {
+                    Button({ screen = "stage1" }, modifier = Modifier.weight(1f)) { Text("Назад") }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Button(
+                        onClick = {
+                            if (months != null && selectedRate != null) {
+                                Toast.makeText(context, "Результат: ${startAmount.toDouble()} руб., ${selectedRate}%, срок $months мес.", Toast.LENGTH_LONG).show()
+                            } else {
+                                Toast.makeText(context, "Выберите ставку", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        enabled = months != null && selectedRate != null
+                    ) { Text("Рассчитать") }
                 }
             }
         }
     }
 }
 
-
-fun validateStage1(startAmount: String, termMonths: String): Boolean {
-    if (startAmount.isBlank() || termMonths.isBlank()) return false
-    val amount = startAmount.toDoubleOrNull()
-    val months = termMonths.toIntOrNull()
-    return amount != null && amount > 0 && months != null && months > 0
-}
-
-
 @Composable
-fun finishAffinity() {
-    val context = getContext()
-    (context as? android.app.Activity)?.finishAffinity()
-}
-
-
-enum class Screen {
-    MAIN, STAGE_1, STAGE_2
-}
-
-@Composable
-fun MainScreen(
-    onCalculateClick: () -> Unit,
-    onHistoryClick: () -> Unit,
-    onCloseClick: () -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
+fun MainScreen(onCalculate: () -> Unit, onHistory: () -> Unit, onClose: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = "Расчёт вкладов",
-                fontSize = 32.sp,
-                style = MaterialTheme.typography.headlineMedium
-            )
-
-            Spacer(modifier = Modifier.height(80.dp))
-
-            Button(
-                onClick = onCalculateClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 32.dp)
-                    .height(56.dp)
-            ) {
-                Text(text = "Рассчитать", fontSize = 18.sp)
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = onHistoryClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 32.dp)
-                    .height(56.dp)
-            ) {
-                Text(text = "История расчётов", fontSize = 18.sp)
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = onCloseClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 32.dp)
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error
-                )
-            ) {
-                Text(text = "Закрыть приложение", fontSize = 18.sp)
-            }
+        Text("Расчёт вкладов", fontSize = 32.sp)
+        Spacer(modifier = Modifier.height(40.dp))
+        Button(onCalculate, Modifier.fillMaxWidth(0.8f).height(56.dp)) { Text("Рассчитать") }
+        Spacer(modifier = Modifier.height(12.dp))
+        Button(onHistory, Modifier.fillMaxWidth(0.8f).height(56.dp)) { Text("История расчётов") }
+        Spacer(modifier = Modifier.height(12.dp))
+        Button(onClose, Modifier.fillMaxWidth(0.8f).height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) {
+            Text("Закрыть")
         }
     }
 }
