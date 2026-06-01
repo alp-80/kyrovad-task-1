@@ -23,6 +23,11 @@ android {
         }
     }
 
+    packagingOptions {
+        resources.excludes.add("META-INF/**")
+        resources.excludes.add("**/values/*.xml")
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8

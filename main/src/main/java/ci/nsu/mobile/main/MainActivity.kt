@@ -52,7 +52,6 @@ class AuthRepository(val api: ApiService, val tm: TokenManager) {
         val res = api.login(LoginRequest(login, password))
         if (res.isSuccessful) { tm.token = res.body()?.token; true } else false
     } catch(e: Exception) { false }
-
     suspend fun register(req: RegisterRequest): Boolean = try { api.register(req).isSuccessful } catch(e: Exception) { false }
     suspend fun getUsers(): List<UserDto> = try { api.getUsers().body() ?: emptyList() } catch(e: Exception) { emptyList() }
     suspend fun getGroups(): List<GroupDto> = try { api.getGroups().body() ?: emptyList() } catch(e: Exception) { emptyList() }
@@ -63,15 +62,13 @@ class LoginViewModel(val repo: AuthRepository) : ViewModel() {
     private val _loading = MutableStateFlow(false); val loading: StateFlow<Boolean> = _loading.asStateFlow()
     private val _error = MutableStateFlow<String?>(null); val error: StateFlow<String?> = _error.asStateFlow()
     private val _success = MutableStateFlow(false); val success: StateFlow<Boolean> = _success.asStateFlow()
-
     fun login(login: String, pass: String) { viewModelScope.launch {
         _loading.value = true
-        val result = repo.login(login, pass)
-        if (result) _success.value = true else _error.value = "Ошибка входа"
+        _success.value = repo.login(login, pass)
+        if (!_success.value) _error.value = "Ошибка входа"
         _loading.value = false
     }}
-    fun clearError() { _error.value = null }
-    fun clearSuccess() { _success.value = false }
+    fun clear() { _error.value = null; _success.value = false }
 }
 
 class RegisterViewModel(val repo: AuthRepository) : ViewModel() {
@@ -79,50 +76,29 @@ class RegisterViewModel(val repo: AuthRepository) : ViewModel() {
     private val _groups = MutableStateFlow<List<GroupDto>>(emptyList()); val groups: StateFlow<List<GroupDto>> = _groups.asStateFlow()
     private val _success = MutableStateFlow(false); val success: StateFlow<Boolean> = _success.asStateFlow()
     private val _error = MutableStateFlow<String?>(null); val error: StateFlow<String?> = _error.asStateFlow()
-
     init { viewModelScope.launch { _groups.value = repo.getGroups() } }
-
     fun register(req: RegisterRequest) { viewModelScope.launch {
         _loading.value = true
-        val result = repo.register(req)
-        if (result) _success.value = true else _error.value = "Ошибка регистрации"
+        _success.value = repo.register(req)
+        if (!_success.value) _error.value = "Ошибка регистрации"
         _loading.value = false
     }}
-    fun clearSuccess() { _success.value = false }
-    fun clearError() { _error.value = null }
+    fun clear() { _error.value = null; _success.value = false }
 }
 
 class UsersViewModel(val repo: AuthRepository) : ViewModel() {
     private val _users = MutableStateFlow<List<UserDto>>(emptyList()); val users: StateFlow<List<UserDto>> = _users.asStateFlow()
     private val _loading = MutableStateFlow(true); val loading: StateFlow<Boolean> = _loading.asStateFlow()
-
     init { load() }
     fun load() { viewModelScope.launch { _loading.value = true; _users.value = repo.getUsers(); _loading.value = false } }
     fun logout() { repo.logout() }
 }
 
-fun getApiService(tm: TokenManager): ApiService {
-    val client = OkHttpClient.Builder()
-        .addInterceptor { chain ->
-            val req = chain.request().newBuilder().addHeader("Content-Type", "application/json")
-            tm.token?.let { req.addHeader("Authorization", "Bearer $it") }
-            chain.proceed(req.build())
-        }
-        .addInterceptor(HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY })
-        .build()
-    return Retrofit.Builder()
-        .baseUrl("http://192.168.200.160:8080/api/")
-        .client(client)
-        .addConverterFactory(GsonConverterFactory.create())
-        .build()
-        .create(ApiService::class.java)
-}
-
 @Composable
 fun LoginScreen(onSuccess: () -> Unit, onReg: () -> Unit) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val tm = remember { TokenManager(context) }
-    val api = remember { getApiService(tm) }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val tm = remember { TokenManager(ctx) }
+    val api = remember { RetrofitClient.getApi(tm) }
     val repo = remember { AuthRepository(api, tm) }
     val vm: LoginViewModel = viewModel(factory = androidx.lifecycle.ViewModelProvider.Factory { LoginViewModel(repo) })
 
@@ -132,30 +108,29 @@ fun LoginScreen(onSuccess: () -> Unit, onReg: () -> Unit) {
     val error by vm.error.collectAsState()
     val success by vm.success.collectAsState()
 
-    LaunchedEffect(success) { if (success) { vm.clearSuccess(); onSuccess() } }
-    LaunchedEffect(error) { if (error != null) { kotlinx.coroutines.delay(2000); vm.clearError() } }
+    LaunchedEffect(success) { if (success) { vm.clear(); onSuccess() } }
 
     Column(Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.Center) {
         Text("Вход", style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(24.dp))
-        OutlinedTextField(login, { login = it }, label = { Text("Логин") }, Modifier.fillMaxWidth())
+        OutlinedTextField(login, { login = it }, { Text("Логин") }, Modifier.fillMaxWidth())
         Spacer(Modifier.height(12.dp))
-        OutlinedTextField(pass, { pass = it }, label = { Text("Пароль") }, visualTransformation = PasswordVisualTransformation(), Modifier.fillMaxWidth())
+        OutlinedTextField(pass, { pass = it }, { Text("Пароль") }, Modifier.fillMaxWidth(), visualTransformation = PasswordVisualTransformation())
         Spacer(Modifier.height(24.dp))
         Button({ vm.login(login, pass) }, Modifier.fillMaxWidth(), enabled = !loading) {
             if (loading) CircularProgressIndicator(Modifier.size(20.dp)) else Text("Войти")
         }
         TextButton({ onReg() }, Modifier.fillMaxWidth()) { Text("Нет аккаунта? Зарегистрироваться") }
-        if (error != null) Snackbar(Modifier.padding(top = 16.dp)) { Text(error!!) }
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 16.dp)) }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(onSuccess: () -> Unit, onBack: () -> Unit) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val tm = remember { TokenManager(context) }
-    val api = remember { getApiService(tm) }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val tm = remember { TokenManager(ctx) }
+    val api = remember { RetrofitClient.getApi(tm) }
     val repo = remember { AuthRepository(api, tm) }
     val vm: RegisterViewModel = viewModel(factory = androidx.lifecycle.ViewModelProvider.Factory { RegisterViewModel(repo) })
 
@@ -167,8 +142,7 @@ fun RegisterScreen(onSuccess: () -> Unit, onBack: () -> Unit) {
     val loading by vm.loading.collectAsState(); val groups by vm.groups.collectAsState()
     val success by vm.success.collectAsState(); val error by vm.error.collectAsState()
 
-    LaunchedEffect(success) { if (success) { vm.clearSuccess(); onSuccess() } }
-    LaunchedEffect(error) { if (error != null) { kotlinx.coroutines.delay(2000); vm.clearError() } }
+    LaunchedEffect(success) { if (success) { vm.clear(); onSuccess() } }
 
     Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp)) {
         Text("Регистрация", style = MaterialTheme.typography.headlineMedium); Spacer(Modifier.height(16.dp))
@@ -202,15 +176,15 @@ fun RegisterScreen(onSuccess: () -> Unit, onBack: () -> Unit) {
             if (loading) CircularProgressIndicator(Modifier.size(20.dp)) else Text("Зарегистрироваться")
         }
         TextButton({ onBack() }, Modifier.fillMaxWidth()) { Text("Назад") }
-        if (error != null) Snackbar(Modifier.padding(top = 16.dp)) { Text(error!!) }
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
     }
 }
 
 @Composable
 fun UsersScreen(onLogout: () -> Unit) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val tm = remember { TokenManager(context) }
-    val api = remember { getApiService(tm) }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val tm = remember { TokenManager(ctx) }
+    val api = remember { RetrofitClient.getApi(tm) }
     val repo = remember { AuthRepository(api, tm) }
     val vm: UsersViewModel = viewModel(factory = androidx.lifecycle.ViewModelProvider.Factory { UsersViewModel(repo) })
 
@@ -228,6 +202,25 @@ fun UsersScreen(onLogout: () -> Unit) {
                 } }
             } }
         }
+    }
+}
+
+object RetrofitClient {
+    fun getApi(tm: TokenManager): ApiService {
+        val client = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val req = chain.request().newBuilder().addHeader("Content-Type", "application/json")
+                tm.token?.let { req.addHeader("Authorization", "Bearer $it") }
+                chain.proceed(req.build())
+            }
+            .addInterceptor(HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY })
+            .build()
+        return Retrofit.Builder()
+            .baseUrl("http://192.168.200.160:8080/api/")
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(ApiService::class.java)
     }
 }
 
