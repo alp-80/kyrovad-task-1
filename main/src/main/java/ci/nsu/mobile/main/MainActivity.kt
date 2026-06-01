@@ -16,6 +16,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -64,8 +65,9 @@ class LoginViewModel(val repo: AuthRepository) : ViewModel() {
     private val _success = MutableStateFlow(false); val success: StateFlow<Boolean> = _success.asStateFlow()
     fun login(login: String, pass: String) { viewModelScope.launch {
         _loading.value = true
-        _success.value = repo.login(login, pass)
-        if (!_success.value) _error.value = "Ошибка входа"
+        val result = repo.login(login, pass)
+        _success.value = result
+        if (!result) _error.value = "Ошибка входа"
         _loading.value = false
     }}
     fun clear() { _error.value = null; _success.value = false }
@@ -79,8 +81,9 @@ class RegisterViewModel(val repo: AuthRepository) : ViewModel() {
     init { viewModelScope.launch { _groups.value = repo.getGroups() } }
     fun register(req: RegisterRequest) { viewModelScope.launch {
         _loading.value = true
-        _success.value = repo.register(req)
-        if (!_success.value) _error.value = "Ошибка регистрации"
+        val result = repo.register(req)
+        _success.value = result
+        if (!result) _error.value = "Ошибка регистрации"
         _loading.value = false
     }}
     fun clear() { _error.value = null; _success.value = false }
@@ -100,7 +103,11 @@ fun LoginScreen(onSuccess: () -> Unit, onReg: () -> Unit) {
     val tm = remember { TokenManager(ctx) }
     val api = remember { RetrofitClient.getApi(tm) }
     val repo = remember { AuthRepository(api, tm) }
-    val vm: LoginViewModel = viewModel(factory = androidx.lifecycle.ViewModelProvider.Factory { LoginViewModel(repo) })
+    val vm: LoginViewModel = viewModel(factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+            return LoginViewModel(repo) as T
+        }
+    })
 
     var login by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
@@ -113,15 +120,15 @@ fun LoginScreen(onSuccess: () -> Unit, onReg: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.Center) {
         Text("Вход", style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(24.dp))
-        OutlinedTextField(login, { login = it }, { Text("Логин") }, Modifier.fillMaxWidth())
+        OutlinedTextField(value = login, onValueChange = { login = it }, label = { Text("Логин") }, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(12.dp))
-        OutlinedTextField(pass, { pass = it }, { Text("Пароль") }, Modifier.fillMaxWidth(), visualTransformation = PasswordVisualTransformation())
+        OutlinedTextField(value = pass, onValueChange = { pass = it }, label = { Text("Пароль") }, modifier = Modifier.fillMaxWidth(), visualTransformation = PasswordVisualTransformation())
         Spacer(Modifier.height(24.dp))
-        Button({ vm.login(login, pass) }, Modifier.fillMaxWidth(), enabled = !loading) {
+        Button(onClick = { vm.login(login, pass) }, modifier = Modifier.fillMaxWidth(), enabled = !loading) {
             if (loading) CircularProgressIndicator(Modifier.size(20.dp)) else Text("Войти")
         }
-        TextButton({ onReg() }, Modifier.fillMaxWidth()) { Text("Нет аккаунта? Зарегистрироваться") }
-        error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 16.dp)) }
+        TextButton(onClick = onReg, modifier = Modifier.fillMaxWidth()) { Text("Нет аккаунта? Зарегистрироваться") }
+        if (error != null) { Text(text = error!!, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 16.dp)) }
     }
 }
 
@@ -132,7 +139,11 @@ fun RegisterScreen(onSuccess: () -> Unit, onBack: () -> Unit) {
     val tm = remember { TokenManager(ctx) }
     val api = remember { RetrofitClient.getApi(tm) }
     val repo = remember { AuthRepository(api, tm) }
-    val vm: RegisterViewModel = viewModel(factory = androidx.lifecycle.ViewModelProvider.Factory { RegisterViewModel(repo) })
+    val vm: RegisterViewModel = viewModel(factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+            return RegisterViewModel(repo) as T
+        }
+    })
 
     var fn by remember { mutableStateOf("") }; var ln by remember { mutableStateOf("") }; var mn by remember { mutableStateOf("") }
     var bd by remember { mutableStateOf("") }; var gender by remember { mutableStateOf("") }; var gid by remember { mutableStateOf(0) }
@@ -146,37 +157,37 @@ fun RegisterScreen(onSuccess: () -> Unit, onBack: () -> Unit) {
 
     Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp)) {
         Text("Регистрация", style = MaterialTheme.typography.headlineMedium); Spacer(Modifier.height(16.dp))
-        OutlinedTextField(ln, { ln = it }, { Text("Фамилия") }, Modifier.fillMaxWidth())
-        OutlinedTextField(fn, { fn = it }, { Text("Имя") }, Modifier.fillMaxWidth())
-        OutlinedTextField(mn, { mn = it }, { Text("Отчество") }, Modifier.fillMaxWidth())
-        OutlinedTextField(bd, { bd = it }, { Text("Дата рождения (ГГГГ-ММ-ДД)") }, Modifier.fillMaxWidth())
+        OutlinedTextField(value = ln, onValueChange = { ln = it }, label = { Text("Фамилия") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = fn, onValueChange = { fn = it }, label = { Text("Имя") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = mn, onValueChange = { mn = it }, label = { Text("Отчество") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = bd, onValueChange = { bd = it }, label = { Text("Дата рождения (ГГГГ-ММ-ДД)") }, modifier = Modifier.fillMaxWidth())
 
         var ge by remember { mutableStateOf(false) }
-        ExposedDropdownMenuBox(ge, { ge = it }) {
+        ExposedDropdownMenuBox(expanded = ge, onExpandedChange = { ge = it }) {
             TextField(value = when(gender){ "MALE"->"Мужской"; "FEMALE"->"Женский"; else->"" }, onValueChange = {}, readOnly = true, label = { Text("Пол") }, modifier = Modifier.fillMaxWidth().menuAnchor())
-            DropdownMenu(ge, { ge = false }) {
-                DropdownMenuItem({ Text("Мужской") }, onClick = { gender = "MALE"; ge = false })
-                DropdownMenuItem({ Text("Женский") }, onClick = { gender = "FEMALE"; ge = false })
+            DropdownMenu(expanded = ge, onDismissRequest = { ge = false }) {
+                DropdownMenuItem(text = { Text("Мужской") }, onClick = { gender = "MALE"; ge = false })
+                DropdownMenuItem(text = { Text("Женский") }, onClick = { gender = "FEMALE"; ge = false })
             }
         }
 
         var gex by remember { mutableStateOf(false) }
-        ExposedDropdownMenuBox(gex, { gex = it }) {
+        ExposedDropdownMenuBox(expanded = gex, onExpandedChange = { gex = it }) {
             TextField(value = groups.find { it.groupId == gid }?.groupName ?: "", onValueChange = {}, readOnly = true, label = { Text("Группа") }, modifier = Modifier.fillMaxWidth().menuAnchor())
-            DropdownMenu(gex, { gex = false }) { groups.forEach { DropdownMenuItem({ Text(it.groupName) }, onClick = { gid = it.groupId; gex = false }) } }
+            DropdownMenu(expanded = gex, onDismissRequest = { gex = false }) { groups.forEach { group -> DropdownMenuItem(text = { Text(group.groupName) }, onClick = { gid = group.groupId; gex = false }) } }
         }
 
-        OutlinedTextField(login, { login = it }, { Text("Логин") }, Modifier.fillMaxWidth())
-        OutlinedTextField(pass, { pass = it }, { Text("Пароль") }, Modifier.fillMaxWidth(), visualTransformation = PasswordVisualTransformation())
-        OutlinedTextField(email, { email = it }, { Text("Email") }, Modifier.fillMaxWidth())
-        OutlinedTextField(phone, { phone = it }, { Text("Телефон") }, Modifier.fillMaxWidth())
+        OutlinedTextField(value = login, onValueChange = { login = it }, label = { Text("Логин") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = pass, onValueChange = { pass = it }, label = { Text("Пароль") }, modifier = Modifier.fillMaxWidth(), visualTransformation = PasswordVisualTransformation())
+        OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Телефон") }, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(24.dp))
 
-        Button({ vm.register(RegisterRequest(login, pass, email, phone, 1, true, PersonDto(fn, ln, mn, bd, gender, gid))) }, Modifier.fillMaxWidth(), enabled = !loading) {
+        Button(onClick = { vm.register(RegisterRequest(login, pass, email, phone, 1, true, PersonDto(fn, ln, mn, bd, gender, gid))) }, modifier = Modifier.fillMaxWidth(), enabled = !loading) {
             if (loading) CircularProgressIndicator(Modifier.size(20.dp)) else Text("Зарегистрироваться")
         }
-        TextButton({ onBack() }, Modifier.fillMaxWidth()) { Text("Назад") }
-        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Назад") }
+        if (error != null) { Text(text = error!!, color = MaterialTheme.colorScheme.error) }
     }
 }
 
@@ -186,56 +197,60 @@ fun UsersScreen(onLogout: () -> Unit) {
     val tm = remember { TokenManager(ctx) }
     val api = remember { RetrofitClient.getApi(tm) }
     val repo = remember { AuthRepository(api, tm) }
-    val vm: UsersViewModel = viewModel(factory = androidx.lifecycle.ViewModelProvider.Factory { UsersViewModel(repo) })
+    val vm: UsersViewModel = viewModel(factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+            return UsersViewModel(repo) as T
+        }
+    })
 
     val users by vm.users.collectAsState(); val loading by vm.loading.collectAsState()
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Пользователи") }, actions = { Button({ vm.logout(); onLogout() }) { Text("Выйти") } }) }) { pad ->
-        Box(Modifier.fillMaxSize().padding(pad)) {
-            if (loading) CircularProgressIndicator(Modifier.align(Alignment.Center))
-            else if (users.isEmpty()) Text("Нет пользователей", Modifier.align(Alignment.Center))
-            else LazyColumn { items(users) { user ->
-                Card(Modifier.fillMaxWidth().padding(8.dp)) { Column(Modifier.padding(16.dp)) {
-                    Text(user.login, style = MaterialTheme.typography.titleMedium)
-                    Text(user.email); Text(user.phoneNumber)
-                    user.person?.let { Text("${it.lastName} ${it.firstName} ${it.middleName}") }
+    Scaffold(topBar = { TopAppBar(title = { Text("Пользователи") }, actions = { Button(onClick = { vm.logout(); onLogout() }) { Text("Выйти") } }) }) { paddingValues ->
+        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+            if (loading) { CircularProgressIndicator(modifier = Modifier.align(Alignment.Center)) }
+            else if (users.isEmpty()) { Text(text = "Нет пользователей", modifier = Modifier.align(Alignment.Center)) }
+            else { LazyColumn { items(users) { user ->
+                Card(modifier = Modifier.fillMaxWidth().padding(8.dp)) { Column(modifier = Modifier.padding(16.dp)) {
+                    Text(text = user.login, style = MaterialTheme.typography.titleMedium)
+                    Text(text = user.email); Text(text = user.phoneNumber)
+                    user.person?.let { Text(text = "${it.lastName} ${it.firstName} ${it.middleName}") }
                 } }
             } }
+            }
         }
     }
-}
 
-object RetrofitClient {
-    fun getApi(tm: TokenManager): ApiService {
-        val client = OkHttpClient.Builder()
-            .addInterceptor { chain ->
-                val req = chain.request().newBuilder().addHeader("Content-Type", "application/json")
-                tm.token?.let { req.addHeader("Authorization", "Bearer $it") }
-                chain.proceed(req.build())
-            }
-            .addInterceptor(HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY })
-            .build()
-        return Retrofit.Builder()
-            .baseUrl("http://192.168.200.160:8080/api/")
-            .client(client)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(ApiService::class.java)
+    object RetrofitClient {
+        fun getApi(tm: TokenManager): ApiService {
+            val client = OkHttpClient.Builder()
+                .addInterceptor { chain ->
+                    val req = chain.request().newBuilder().addHeader("Content-Type", "application/json")
+                    tm.token?.let { req.addHeader("Authorization", "Bearer $it") }
+                    chain.proceed(req.build())
+                }
+                .addInterceptor(HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY })
+                .build()
+            return Retrofit.Builder()
+                .baseUrl("http://192.168.200.160:8080/api/")
+                .client(client)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build()
+                .create(ApiService::class.java)
+        }
     }
-}
 
-class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            MaterialTheme {
-                var screen by remember { mutableStateOf("login") }
-                when (screen) {
-                    "login" -> LoginScreen({ screen = "users" }, { screen = "register" })
-                    "register" -> RegisterScreen({ screen = "login" }, { screen = "login" })
-                    "users" -> UsersScreen({ screen = "login" })
+    class MainActivity : ComponentActivity() {
+        override fun onCreate(savedInstanceState: Bundle?) {
+            super.onCreate(savedInstanceState)
+            setContent {
+                MaterialTheme {
+                    var screen by remember { mutableStateOf("login") }
+                    when (screen) {
+                        "login" -> LoginScreen(onSuccess = { screen = "users" }, onReg = { screen = "register" })
+                        "register" -> RegisterScreen(onSuccess = { screen = "login" }, onBack = { screen = "login" })
+                        "users" -> UsersScreen(onLogout = { screen = "login" })
+                    }
                 }
             }
         }
     }
-}
