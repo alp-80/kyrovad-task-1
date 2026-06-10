@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 import android.widget.Toast
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewCalculationScreen(viewModel: DepositViewModel) {
     var stage by remember { mutableStateOf(1) }

@@ -16,7 +16,7 @@ import ci.nsu.mobile.main.users.presentation.UsersViewModel
 
 class ServiceLocator(private val context: Context) {
 
-    private val tokenManager by lazy {
+    val tokenManager by lazy {
         TokenManager(context.applicationContext)
     }
 
@@ -41,7 +41,7 @@ class ServiceLocator(private val context: Context) {
     }
 }
 
-class ViewModelFactory(private val serviceLocator: ServiceLocator) {
+class ViewModelFactory(val serviceLocator: ServiceLocator) {
 
     fun createAuthViewModel(): AuthViewModel {
         return AuthViewModel(serviceLocator.authRepository)

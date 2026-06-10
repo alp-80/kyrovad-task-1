@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.Color
+import ci.nsu.mobile.main.deposit.data.database.DepositCalculation
 
 @Composable
 fun DepositHistoryScreen(viewModel: DepositViewModel) {

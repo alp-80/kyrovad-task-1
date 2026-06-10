@@ -1,5 +1,10 @@
 package ci.nsu.mobile.main.auth.data
 
+import ci.nsu.mobile.main.auth.data.models.LoginRequest
+import ci.nsu.mobile.main.auth.data.models.LoginResponse
+import ci.nsu.mobile.main.auth.data.models.RegisterRequest
+import ci.nsu.mobile.main.auth.data.models.UserDto
+import ci.nsu.mobile.main.auth.data.models.GroupDto
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -24,8 +29,6 @@ interface ApiService {
     suspend fun getMe(): Response<UserDto>
 }
 
-                // эмулятор 10.0.2.2
-                // вки
 const val BASE_URL = "http://10.0.2.2:8080/api/"
 
 fun createApiService(tokenManager: TokenManager): ApiService {

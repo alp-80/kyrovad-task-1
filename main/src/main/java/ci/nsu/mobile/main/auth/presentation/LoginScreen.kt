@@ -16,6 +16,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import ci.nsu.mobile.main.auth.data.models.LoginRequest
+import ci.nsu.mobile.main.auth.data.models.RegisterRequest
+import ci.nsu.mobile.main.auth.data.models.PersonDto
+import ci.nsu.mobile.main.auth.data.models.GroupDto
 
 class AuthViewModel(
     private val repository: AuthRepository

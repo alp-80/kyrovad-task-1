@@ -3,7 +3,7 @@ package ci.nsu.mobile.main
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -11,7 +11,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -40,6 +39,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             MyAppTheme {
                 MyApp(
+                    authRepository = serviceLocator.authRepository,
                     viewModelFactory = viewModelFactory
                 )
             }
@@ -48,8 +48,10 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MyApp(viewModelFactory: ViewModelFactory) {
-    val authRepository = viewModelFactory.serviceLocator.authRepository
+fun MyApp(
+    authRepository: ci.nsu.mobile.main.auth.data.AuthRepository,
+    viewModelFactory: ViewModelFactory
+) {
     var isAuthenticated by remember {
         mutableStateOf(authRepository.tokenManager.token != null)
     }
@@ -105,7 +107,7 @@ fun MainAppNavHost(
     Scaffold(
         bottomBar = {
             NavigationBar(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
             ) {
                 val items = listOf(
                     "Пользователи" to Icons.Default.People,
