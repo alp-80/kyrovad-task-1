@@ -1,16 +1,12 @@
 package ci.nsu.mobile.main.auth.data
 
-import ci.nsu.mobile.main.auth.data.models.LoginRequest
-import ci.nsu.mobile.main.auth.data.models.LoginResponse
-import ci.nsu.mobile.main.auth.data.models.RegisterRequest
-import ci.nsu.mobile.main.auth.data.models.UserDto
-import ci.nsu.mobile.main.auth.data.models.GroupDto
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.*
 import retrofit2.Response
+import ci.nsu.mobile.main.auth.data.models.*
 
 interface ApiService {
     @POST("auth/login")

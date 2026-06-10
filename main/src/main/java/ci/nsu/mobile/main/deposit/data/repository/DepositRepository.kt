@@ -4,7 +4,6 @@ import ci.nsu.mobile.main.auth.data.TokenManager
 import ci.nsu.mobile.main.deposit.data.database.DepositCalculation
 import ci.nsu.mobile.main.deposit.data.database.DepositDao
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 
 class DepositRepository(
     private val dao: DepositDao,
@@ -12,7 +11,11 @@ class DepositRepository(
 ) {
 
     private fun getCurrentUserId(): Long {
-        return tokenManager.getUserId() ?: throw IllegalStateException("Пользователь не авторизован")
+        val userId = tokenManager.getUserId()
+        if (userId == null) {
+            throw IllegalStateException("Пользователь не авторизован. userId = null")
+        }
+        return userId
     }
 
     fun getUserCalculations(): Flow<List<DepositCalculation>> {

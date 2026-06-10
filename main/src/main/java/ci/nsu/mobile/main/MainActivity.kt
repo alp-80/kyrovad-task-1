@@ -53,7 +53,7 @@ fun MyApp(
     viewModelFactory: ViewModelFactory
 ) {
     var isAuthenticated by remember {
-        mutableStateOf(authRepository.tokenManager.token != null)
+        mutableStateOf(authRepository.isLoggedIn())
     }
 
     if (!isAuthenticated) {
@@ -106,9 +106,7 @@ fun MainAppNavHost(
 
     Scaffold(
         bottomBar = {
-            NavigationBar(
-                modifier = Modifier
-            ) {
+            NavigationBar {
                 val items = listOf(
                     "Пользователи" to Icons.Default.People,
                     "Мои расчёты" to Icons.Default.List,

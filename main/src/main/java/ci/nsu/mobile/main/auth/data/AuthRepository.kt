@@ -1,5 +1,6 @@
 package ci.nsu.mobile.main.auth.data
 
+import android.content.SharedPreferences
 import ci.nsu.mobile.main.auth.data.models.*
 
 class AuthRepository(
@@ -7,12 +8,26 @@ class AuthRepository(
     private val tm: TokenManager
 ) {
 
+    fun isLoggedIn(): Boolean {
+        return tm.token != null
+    }
+
     suspend fun login(login: String, password: String): Boolean {
         return try {
             val res = api.login(LoginRequest(login, password))
             if (res.isSuccessful) {
                 val token = res.body()?.token
                 tm.token = token
+
+                val meResponse = api.getMe()
+                if (meResponse.isSuccessful) {
+                    val userId = meResponse.body()?.userId?.toLong()
+                    if (userId != null && tm.getUserId() == null) {
+                        token?.let {
+                            tm.token = it
+                        }
+                    }
+                }
                 true
             } else false
         } catch(e: Exception) {

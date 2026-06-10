@@ -1,5 +1,6 @@
 package ci.nsu.mobile.main.deposit.presentation
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ci.nsu.mobile.main.deposit.data.database.DepositCalculation
@@ -23,20 +24,24 @@ class DepositViewModel(
     val error: StateFlow<String?> = _error.asStateFlow()
 
     init {
+        Log.d("DepositViewModel", "ViewModel инициализирован")
         loadCalculations()
     }
 
     fun loadCalculations() {
+        Log.d("DepositViewModel", "loadCalculations() вызван")
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
             try {
                 repository.getUserCalculations().collect { calculations ->
+                    Log.d("DepositViewModel", "Получено расчётов: ${calculations.size}")
                     _calculations.value = calculations
+                    _isLoading.value = false
                 }
             } catch (e: Exception) {
+                Log.e("DepositViewModel", "Ошибка: ${e.message}", e)
                 _error.value = "Ошибка загрузки: ${e.message}"
-            } finally {
                 _isLoading.value = false
             }
         }
@@ -65,6 +70,7 @@ class DepositViewModel(
                 repository.saveCalculation(calculation)
                 loadCalculations()
             } catch (e: Exception) {
+                Log.e("DepositViewModel", "Ошибка сохранения: ${e.message}", e)
                 _error.value = "Ошибка сохранения: ${e.message}"
             }
         }
@@ -76,6 +82,7 @@ class DepositViewModel(
                 repository.deleteCalculation(calculation)
                 loadCalculations()
             } catch (e: Exception) {
+                Log.e("DepositViewModel", "Ошибка удаления: ${e.message}", e)
                 _error.value = "Ошибка удаления: ${e.message}"
             }
         }

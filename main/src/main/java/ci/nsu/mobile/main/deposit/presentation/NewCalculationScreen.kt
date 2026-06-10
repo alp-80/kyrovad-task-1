@@ -1,7 +1,6 @@
 package ci.nsu.mobile.main.deposit.presentation
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -12,7 +11,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 import android.widget.Toast
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewCalculationScreen(viewModel: DepositViewModel) {
     var stage by remember { mutableStateOf(1) }
@@ -195,32 +193,25 @@ fun Stage2Screen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = it }
+        Button(
+            onClick = { expanded = true },
+            modifier = Modifier.fillMaxWidth()
         ) {
-            TextField(
-                value = selectedRate?.let { "${it}%" } ?: "",
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Процентная ставка") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor()
-            )
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
-                rates.forEach { rate ->
-                    DropdownMenuItem(
-                        text = { Text("$rate%") },
-                        onClick = {
-                            onRateSelected(rate)
-                            expanded = false
-                        }
-                    )
-                }
+            Text(selectedRate?.let { "${it}%" } ?: "Выберите процентную ставку")
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            rates.forEach { rate ->
+                DropdownMenuItem(
+                    text = { Text("$rate%") },
+                    onClick = {
+                        onRateSelected(rate)
+                        expanded = false
+                    }
+                )
             }
         }
 
@@ -301,7 +292,7 @@ fun ResultScreen(
 
                 HorizontalDivider()
 
-                ResultRow("Начисленные проценты", formatMoney(earnedInterest), isBold = false)
+                ResultRow("Начисленные проценты", formatMoney(earnedInterest))
                 ResultRow("Итоговая сумма", formatMoney(finalAmount), isBold = true)
             }
         }

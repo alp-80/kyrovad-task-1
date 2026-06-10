@@ -13,6 +13,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
 import ci.nsu.mobile.main.deposit.data.database.DepositCalculation
 
 @Composable
@@ -20,6 +22,14 @@ fun DepositHistoryScreen(viewModel: DepositViewModel) {
     val calculations by viewModel.calculations.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
+    val context = LocalContext.current
+
+    LaunchedEffect(error) {
+        if (error != null) {
+            Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+            viewModel.clearError()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -29,7 +39,8 @@ fun DepositHistoryScreen(viewModel: DepositViewModel) {
         Text(
             text = "Мои расчёты",
             fontSize = 24.sp,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -40,26 +51,28 @@ fun DepositHistoryScreen(viewModel: DepositViewModel) {
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator()
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Загрузка расчётов...", color = MaterialTheme.colorScheme.onBackground)
+                    }
                 }
             }
 
             error != null -> {
-                Column(
+                Box(
                     modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = error!!,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = {
-                        viewModel.clearError()
-                        viewModel.loadCalculations()
-                    }) {
-                        Text("Повторить")
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "Ошибка: $error",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(onClick = { viewModel.loadCalculations() }) {
+                            Text("Повторить")
+                        }
                     }
                 }
             }
@@ -69,12 +82,15 @@ fun DepositHistoryScreen(viewModel: DepositViewModel) {
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "📭",
+                            fontSize = 48.sp
+                        )
                         Text(
                             text = "Нет сохранённых расчётов",
-                            fontSize = 16.sp
+                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
@@ -109,7 +125,10 @@ fun CalculationCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -141,11 +160,12 @@ fun CalculationCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Стартовый взнос:", fontSize = 14.sp)
+                Text("Стартовый взнос:", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
                 Text(
                     formatMoney(calculation.startAmount),
                     fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
 
@@ -153,16 +173,16 @@ fun CalculationCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Срок:", fontSize = 14.sp)
-                Text("${calculation.termMonths} месяцев", fontSize = 14.sp)
+                Text("Срок:", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                Text("${calculation.termMonths} месяцев", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
             }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Ставка:", fontSize = 14.sp)
-                Text("${calculation.interestRate}%", fontSize = 14.sp)
+                Text("Ставка:", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                Text("${calculation.interestRate}%", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
             }
 
             if (calculation.monthlyTopUp > 0) {
@@ -170,8 +190,8 @@ fun CalculationCard(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Пополнение:", fontSize = 14.sp)
-                    Text("${formatMoney(calculation.monthlyTopUp)}/мес", fontSize = 14.sp)
+                    Text("Пополнение:", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                    Text("${formatMoney(calculation.monthlyTopUp)}/мес", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
                 }
             }
 
@@ -187,12 +207,13 @@ fun CalculationCard(
             ) {
                 Text(
                     "Начислено процентов:",
-                    fontSize = 14.sp
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     formatMoney(calculation.earnedInterest),
                     fontSize = 14.sp,
-                    color = Color.Green,
+                    color = Color(0xFF388E3C),
                     fontWeight = FontWeight.Medium
                 )
             }
@@ -204,7 +225,8 @@ fun CalculationCard(
                 Text(
                     "Итоговая сумма:",
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     formatMoney(calculation.finalAmount),

@@ -3,6 +3,22 @@ const { Pool } = require('pg');
 const app = express();
 app.use(express.json());
 
+// CORS для Android
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
+});
+
+// Проверочный маршрут
+app.get('/', (req, res) => {
+    res.json({ message: 'Сервер работает! Используйте /api/... для запросов' });
+});
+
 // Подключение к PostgreSQL
 const pool = new Pool({
     host: 'database',
@@ -42,7 +58,7 @@ async function initDB() {
         await pool.query('INSERT INTO groups (name) VALUES ($1) ON CONFLICT (name) DO NOTHING', [name]);
     }
 
-    // Добавляем тестового пользователя для отладки
+    // Добавляем тестового пользователя
     await pool.query(`
         INSERT INTO users (login, password, email, phone, first_name, last_name, middle_name, birth_date, gender, group_id)
         VALUES ('test', '123', 'test@example.com', '+79991234567', 'Тест', 'Тестовый', 'Тестович', '2000-01-01', 'MALE', 1)
@@ -95,12 +111,13 @@ app.post('/api/auth/login', async (req, res) => {
 
         if (result.rows.length > 0) {
             const user = result.rows[0];
-            // Генерируем простой JWT-подобный токен с userId
-            const token = Buffer.from(JSON.stringify({
+            // Генерируем токен с userId
+            const payload = JSON.stringify({
                 userId: user.id,
                 login: user.login,
-                exp: Date.now() + 86400000 // 24 часа
-            })).toString('base64');
+                exp: Date.now() + 86400000
+            });
+            const token = Buffer.from(payload).toString('base64');
             res.json({ token });
         } else {
             res.status(401).json({ error: 'Неверный логин или пароль' });

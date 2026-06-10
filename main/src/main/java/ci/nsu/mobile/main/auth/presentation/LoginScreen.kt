@@ -48,6 +48,7 @@ class AuthViewModel(
         _error.value = null
         _success.value = false
     }
+
 }
 
 @Composable

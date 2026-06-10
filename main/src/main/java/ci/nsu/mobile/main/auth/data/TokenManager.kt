@@ -19,8 +19,8 @@ class TokenManager(context: Context) {
                 prefs.edit().remove("userId").apply()
             } else {
                 val userId = extractUserIdFromToken(value)
-                _userId.value = userId
                 if (userId != null) {
+                    _userId.value = userId
                     prefs.edit().putLong("userId", userId).apply()
                 }
             }
@@ -32,9 +32,17 @@ class TokenManager(context: Context) {
     private fun extractUserIdFromToken(token: String): Long? {
         return try {
             val decoded = String(Base64.getDecoder().decode(token))
-            val userIdPattern = Regex("\"userId\":(\\d+)")
-            val match = userIdPattern.find(decoded)
-            match?.groupValues?.get(1)?.toLongOrNull()
+            val patterns = listOf(
+                Regex("\"userId\":(\\d+)"),
+                Regex("\"user_id\":(\\d+)"),
+                Regex("userId=(\\d+)")
+            )
+            for (pattern in patterns) {
+                val match = pattern.find(decoded)
+                val id = match?.groupValues?.get(1)?.toLongOrNull()
+                if (id != null) return id
+            }
+            null
         } catch (e: Exception) {
             null
         }
