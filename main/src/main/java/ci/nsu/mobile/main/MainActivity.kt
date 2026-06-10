@@ -54,16 +54,6 @@ fun MyApp(viewModelFactory: ViewModelFactory) {
         mutableStateOf(authRepository.tokenManager.token != null)
     }
 
-    LaunchedEffect(Unit) {
-        while (true) {
-            kotlinx.coroutines.delay(100)
-            val newAuthState = authRepository.tokenManager.token != null
-            if (newAuthState != isAuthenticated) {
-                isAuthenticated = newAuthState
-            }
-        }
-    }
-
     if (!isAuthenticated) {
         AuthNavHost(
             viewModelFactory = viewModelFactory,
@@ -115,32 +105,22 @@ fun MainAppNavHost(
     Scaffold(
         bottomBar = {
             NavigationBar(
-                modifier = Modifier.fillMaxWidth(),
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 3.dp
+                modifier = Modifier.fillMaxWidth()
             ) {
                 val items = listOf(
-                    NavItem("Пользователи", Icons.Default.People),
-                    NavItem("Мои расчёты", Icons.Default.List),
-                    NavItem("Новый расчёт", Icons.Default.Add)
+                    "Пользователи" to Icons.Default.People,
+                    "Мои расчёты" to Icons.Default.List,
+                    "Новый расчёт" to Icons.Default.Add
                 )
 
                 val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
 
-                items.forEach { item ->
+                items.forEach { (route, icon) ->
                     NavigationBarItem(
-                        selected = currentRoute == item.route,
-                        onClick = {
-                            navController.navigate(item.route) {
-                                popUpTo(navController.graph.startDestinationId) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        icon = { Icon(item.icon, contentDescription = item.route) },
-                        label = { Text(item.route) }
+                        selected = currentRoute == route,
+                        onClick = { navController.navigate(route) },
+                        icon = { Icon(icon, contentDescription = route) },
+                        label = { Text(route) }
                     )
                 }
             }
@@ -174,5 +154,3 @@ fun MainAppNavHost(
         }
     }
 }
-
-data class NavItem(val route: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)

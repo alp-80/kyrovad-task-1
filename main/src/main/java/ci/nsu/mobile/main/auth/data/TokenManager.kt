@@ -1,13 +1,14 @@
 package ci.nsu.mobile.main.auth.data
 
 import android.content.Context
+import android.content.SharedPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.Base64
 
 class TokenManager(context: Context) {
-    private val prefs = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+    private val prefs: SharedPreferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
 
     var token: String?
         get() = prefs.getString("token", null)
@@ -15,12 +16,17 @@ class TokenManager(context: Context) {
             prefs.edit().putString("token", value).apply()
             if (value == null) {
                 _userId.value = null
+                prefs.edit().remove("userId").apply()
             } else {
-                _userId.value = extractUserIdFromToken(value)
+                val userId = extractUserIdFromToken(value)
+                _userId.value = userId
+                if (userId != null) {
+                    prefs.edit().putLong("userId", userId).apply()
+                }
             }
         }
 
-    private val _userId = MutableStateFlow<Long?>(null)
+    private val _userId = MutableStateFlow<Long?>(prefs.getLong("userId", -1).takeIf { it != -1L })
     val userId: StateFlow<Long?> = _userId.asStateFlow()
 
     private fun extractUserIdFromToken(token: String): Long? {

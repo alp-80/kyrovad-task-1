@@ -18,37 +18,42 @@ class AuthRepository(
                 if (meResponse.isSuccessful) {
                     meResponse.body()?.userId?.toLong()?.let { userId ->
                         if (tm.getUserId() == null) {
-                            saveUserIdDirectly(userId)
+                            tm.token = token
                         }
                     }
                 }
             }
             true
         } else false
-    } catch(e: Exception) { false }
-
-    private fun saveUserIdDirectly(userId: Long) {
-        val prefs = tm::class.java.getDeclaredField("prefs")
-        prefs.isAccessible = true
-        val sharedPrefs = prefs.get(tm) as android.content.SharedPreferences
-        sharedPrefs.edit().putLong("userId", userId).apply()
+    } catch(e: Exception) {
+        e.printStackTrace()
+        false
     }
 
     suspend fun register(req: RegisterRequest): Boolean = try {
         api.register(req).isSuccessful
-    } catch(e: Exception) { false }
+    } catch(e: Exception) {
+        e.printStackTrace()
+        false
+    }
 
     suspend fun getUsers(): List<UserDto> = try {
         api.getUsers().body() ?: emptyList()
-    } catch(e: Exception) { emptyList() }
+    } catch(e: Exception) {
+        emptyList()
+    }
 
     suspend fun getGroups(): List<GroupDto> = try {
         api.getGroups().body() ?: emptyList()
-    } catch(e: Exception) { emptyList() }
+    } catch(e: Exception) {
+        emptyList()
+    }
 
     suspend fun getCurrentUser(): UserDto? = try {
         api.getMe().body()
-    } catch(e: Exception) { null }
+    } catch(e: Exception) {
+        null
+    }
 
     fun logout() {
         tm.clear()
