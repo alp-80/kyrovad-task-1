@@ -71,7 +71,6 @@ fun RegisterScreen(
 ) {
     val registerViewModel: RegisterViewModel = viewModel(factory = viewModelFactory.createRegisterViewModelFactory())
 
-    // Personal info
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
     var middleName by remember { mutableStateOf("") }
@@ -79,7 +78,6 @@ fun RegisterScreen(
     var gender by remember { mutableStateOf("") }
     var groupId by remember { mutableStateOf(0) }
 
-    // Account info
     var login by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
