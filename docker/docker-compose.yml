@@ -1,0 +1,36 @@
+services:
+  database:
+    image: postgres:15-alpine
+    container_name: deposit_database
+    restart: always
+    environment:
+      POSTGRES_DB: depositdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - deposit-network
+
+  backend:
+    build: .
+    container_name: deposit_backend
+    restart: always
+    depends_on:
+      - database
+    environment:
+      DATABASE_URL: postgresql://postgres:secret@database:5432/depositdb
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    networks:
+      - deposit-network
+
+networks:
+  deposit-network:
+    driver: bridge
+
+volumes:
+  pgdata:
