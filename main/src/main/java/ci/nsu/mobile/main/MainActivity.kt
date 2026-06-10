@@ -4,20 +4,25 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import ci.nsu.mobile.main.auth.presentation.LoginScreen
 import ci.nsu.mobile.main.auth.presentation.RegisterScreen
 import ci.nsu.mobile.main.di.ServiceLocator
 import ci.nsu.mobile.main.di.ViewModelFactory
-import ci.nsu.mobile.main.deposit.presentation.DepositScreen
+import ci.nsu.mobile.main.deposit.presentation.DepositHistoryScreen
 import ci.nsu.mobile.main.deposit.presentation.DepositViewModel
+import ci.nsu.mobile.main.deposit.presentation.NewCalculationScreen
 import ci.nsu.mobile.main.ui.theme.MyAppTheme
 import ci.nsu.mobile.main.users.presentation.UsersScreen
 
@@ -35,10 +40,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             MyAppTheme {
                 MyApp(
-                    viewModelFactory = viewModelFactory,
-                    onLogout = {
-                        serviceLocator.authRepository.logout()
-                    }
+                    viewModelFactory = viewModelFactory
                 )
             }
         }
@@ -46,17 +48,19 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MyApp(
-    viewModelFactory: ViewModelFactory,
-    onLogout: () -> Unit
-) {
+fun MyApp(viewModelFactory: ViewModelFactory) {
     val authRepository = viewModelFactory.serviceLocator.authRepository
-    var isAuthenticated by remember { mutableStateOf(authRepository.tokenManager.token != null) }
+    var isAuthenticated by remember {
+        mutableStateOf(authRepository.tokenManager.token != null)
+    }
 
     LaunchedEffect(Unit) {
         while (true) {
             kotlinx.coroutines.delay(100)
-            isAuthenticated = authRepository.tokenManager.token != null
+            val newAuthState = authRepository.tokenManager.token != null
+            if (newAuthState != isAuthenticated) {
+                isAuthenticated = newAuthState
+            }
         }
     }
 
@@ -71,7 +75,6 @@ fun MyApp(
             onLogout = {
                 authRepository.logout()
                 isAuthenticated = false
-                onLogout()
             }
         )
     }
@@ -85,16 +88,20 @@ fun AuthNavHost(
     var currentScreen by remember { mutableStateOf("login") }
 
     when (currentScreen) {
-        "login" -> LoginScreen(
-            viewModelFactory = viewModelFactory,
-            onSuccess = onLoginSuccess,
-            onReg = { currentScreen = "register" }
-        )
-        "register" -> RegisterScreen(
-            viewModelFactory = viewModelFactory,
-            onSuccess = { currentScreen = "login" },
-            onBack = { currentScreen = "login" }
-        )
+        "login" -> {
+            LoginScreen(
+                viewModelFactory = viewModelFactory,
+                onSuccess = onLoginSuccess,
+                onReg = { currentScreen = "register" }
+            )
+        }
+        "register" -> {
+            RegisterScreen(
+                viewModelFactory = viewModelFactory,
+                onSuccess = { currentScreen = "login" },
+                onBack = { currentScreen = "login" }
+            )
+        }
     }
 }
 
@@ -112,18 +119,19 @@ fun MainAppNavHost(
                 containerColor = MaterialTheme.colorScheme.surface,
                 tonalElevation = 3.dp
             ) {
-                val items = listOf("Пользователи", "Мои расчёты", "Новый расчёт")
-                val icons = listOf(
-                    androidx.compose.material.icons.Icons.Default.Person,
-                    androidx.compose.material.icons.Icons.Default.List,
-                    androidx.compose.material.icons.Icons.Default.Add
+                val items = listOf(
+                    NavItem("Пользователи", Icons.Default.People),
+                    NavItem("Мои расчёты", Icons.Default.List),
+                    NavItem("Новый расчёт", Icons.Default.Add)
                 )
 
-                items.forEachIndexed { index, label ->
+                val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+
+                items.forEach { item ->
                     NavigationBarItem(
-                        selected = navController.currentDestination?.route == label,
+                        selected = currentRoute == item.route,
                         onClick = {
-                            navController.navigate(label) {
+                            navController.navigate(item.route) {
                                 popUpTo(navController.graph.startDestinationId) {
                                     saveState = true
                                 }
@@ -131,13 +139,8 @@ fun MainAppNavHost(
                                 restoreState = true
                             }
                         },
-                        icon = {
-                            androidx.compose.material3.Icon(
-                                icons[index],
-                                contentDescription = label
-                            )
-                        },
-                        label = { Text(label) }
+                        icon = { Icon(item.icon, contentDescription = item.route) },
+                        label = { Text(item.route) }
                     )
                 }
             }
@@ -154,12 +157,14 @@ fun MainAppNavHost(
                     onLogout = onLogout
                 )
             }
+
             composable("Мои расчёты") {
                 val viewModel: DepositViewModel = viewModel(
                     factory = viewModelFactory.createDepositViewModelFactory()
                 )
                 DepositHistoryScreen(viewModel = viewModel)
             }
+
             composable("Новый расчёт") {
                 val viewModel: DepositViewModel = viewModel(
                     factory = viewModelFactory.createDepositViewModelFactory()
@@ -169,3 +174,5 @@ fun MainAppNavHost(
         }
     }
 }
+
+data class NavItem(val route: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)

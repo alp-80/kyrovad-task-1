@@ -12,7 +12,7 @@ class DepositRepository(
 ) {
 
     private fun getCurrentUserId(): Long {
-        return tokenManager.getUserId() ?: 1L
+        return tokenManager.getUserId() ?: throw IllegalStateException("Пользователь не авторизован")
     }
 
     fun getUserCalculations(): Flow<List<DepositCalculation>> {
@@ -21,7 +21,8 @@ class DepositRepository(
     }
 
     suspend fun saveCalculation(calculation: DepositCalculation) {
-        val calculationWithUser = calculation.copy(userId = getCurrentUserId())
+        val userId = getCurrentUserId()
+        val calculationWithUser = calculation.copy(userId = userId)
         dao.insert(calculationWithUser)
     }
 
@@ -30,6 +31,7 @@ class DepositRepository(
     }
 
     suspend fun clearUserCalculations() {
-        dao.deleteAllForUser(getCurrentUserId())
+        val userId = getCurrentUserId()
+        dao.deleteAllForUser(userId)
     }
 }
